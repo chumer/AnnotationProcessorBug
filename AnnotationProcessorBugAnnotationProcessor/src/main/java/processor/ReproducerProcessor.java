@@ -18,9 +18,16 @@ public class ReproducerProcessor extends AbstractProcessor {
 
 	@Override
 	public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
+		// Skip the final, no-op round so we don't emit spurious "not found" errors
+		if (roundEnv.processingOver()) {
+			return false;
+		}
+		
 		TypeElement annotationType = processingEnv.getElementUtils().getTypeElement("test.ReproduceIssue");
+		boolean processedAnnotatedElement = false;
 		
 		for (ExecutableElement e : ElementFilter.methodsIn(roundEnv.getElementsAnnotatedWith(annotationType))) {
+			processedAnnotatedElement = true;
 			TypeMirror returnType = e.getReturnType();
 			if (returnType.getKind() == TypeKind.DECLARED) {
 				Element declaredElement = ((DeclaredType)returnType).asElement();
@@ -48,7 +55,9 @@ public class ReproducerProcessor extends AbstractProcessor {
 				}
 			}
 		}
-		processingEnv.getMessager().printError("Element not found");
+		if (!processedAnnotatedElement) {
+			processingEnv.getMessager().printError("Element not found");
+		}
 		return true;
 	}
 	
